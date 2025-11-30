@@ -1,7 +1,7 @@
-#include "ui/CLI.hpp"
+#include "ui/cli/CLI.hpp"
 
 int main() {
-    CLI cli;
+    ui::CLI cli;
     cli.run();
     return 0;
 }

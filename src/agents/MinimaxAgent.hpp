@@ -1,7 +1,14 @@
 #pragma once
-#include "Agent.hpp"
+#include "agent.hpp"
+#include "../search/minimax.hpp"\
 
-class MinimaxAgent : public Agent {
-public:
-    void chooseMove(const Board& board) override;
-};
+using namespace game;
+
+namespace agents {
+
+    class MinimaxAgent : public Agent {
+    public:
+        Move chooseMove(const Board& board) override;
+    };
+
+}

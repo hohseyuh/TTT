@@ -1,5 +1,13 @@
-#include "AlphaBetaAgent.hpp"
+#include "alphaBetaAgent.hpp"
+using namespace std;
+using namespace game;
+using namespace search;
 
-void AlphaBetaAgent::chooseMove(const Board& board) {
-    // Implementation
+namespace agents {
+
+    Move AlphaBetaAgent::chooseMove(const Board& board) {
+        AlphaBetaResult result = AlphaBeta::run(board);
+        return result.move;
+    }
+
 }

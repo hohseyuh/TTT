@@ -1,7 +1,12 @@
 #pragma once
-#include "Agent.hpp"
+#include "agent.hpp"
+#include "../search/alphaBeta.hpp"
 
-class AlphaBetaAgent : public Agent {
-public:
-    void chooseMove(const Board& board) override;
-};
+namespace agents {
+
+    class AlphaBetaAgent : public Agent {
+    public:
+        Move chooseMove(const Board& board) override;
+    };
+
+}

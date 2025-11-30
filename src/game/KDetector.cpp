@@ -2,7 +2,6 @@
 #include <vector>
 
 using namespace std;
-using namespace KDetector;
 
 namespace game {
 
@@ -25,7 +24,7 @@ static inline optional<char> checkLine(const vector<char>& line, int k) {
     return nullopt;
 }
 
-optional<char> findWinner(const Board& board) noexcept {
+optional<char> KDetector::findWinner(const Board& board) noexcept {
     const int m = board.m;
     const int k = board.k;
 
@@ -46,14 +45,13 @@ optional<char> findWinner(const Board& board) noexcept {
     }
 
     // Check diagonals (r - c = const)
+    // For each possible diagonal with length >= k
     for (int d = -(m - 1); d <= (m - 1); ++d) {
         vector<char> diag;
         for (int r = 0; r < m; ++r) {
             int c = r - d;
             if (c >= 0 && c < m) diag.push_back(board.at(r, c));
         }
-
-        // Oversize diagonals are not checked
         if (static_cast<int>(diag.size()) >= k) {
             if (auto w = checkLine(diag, k)) return w;
         }
@@ -66,8 +64,6 @@ optional<char> findWinner(const Board& board) noexcept {
             int c = s - r;
             if (c >= 0 && c < m) adiag.push_back(board.at(r, c));
         }
-
-        // Oversize...
         if (static_cast<int>(adiag.size()) >= k) {
             if (auto w = checkLine(adiag, k)) return w;
         }

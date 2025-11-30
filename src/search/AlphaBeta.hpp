@@ -1,17 +1,17 @@
 #pragma once
 #include "../game/Rules.hpp"
-#include <optional>
+#include <bits/stdc++.h>
 
 namespace search {
 
-struct AlphaBetaResult {
-    int value;
-    game::Move move;
-};
+    struct AlphaBetaResult {
+        int value;
+        game::Move move;
+    };
 
-class AlphaBeta {
-public:
-    static AlphaBetaResult run(const game::Board& board);
-};
+    class AlphaBeta {
+    public:
+        static AlphaBetaResult run(const game::Board& board);
+    };
 
 }

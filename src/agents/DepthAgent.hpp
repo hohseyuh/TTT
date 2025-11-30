@@ -1,7 +1,17 @@
 #pragma once
-#include "Agent.hpp"
+#include "agent.hpp"
+#include "../search/depthLimited.hpp"
 
-class DepthAgent : public Agent {
-public:
-    void chooseMove(const Board& board) override;
-};
+namespace agents {
+
+    class DepthAgent : public Agent {
+    public:
+        explicit DepthAgent(int depthLimit);
+
+        Move chooseMove(const Board& board) override;
+
+    private:
+        int depth;
+    };
+
+}

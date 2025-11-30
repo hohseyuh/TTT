@@ -1,6 +1,11 @@
 #pragma once
-#include "../game/Board.hpp"
+#include "../game/Rules.hpp"
 
-namespace MoveOrdering {
-    // Move ordering logic
+namespace search {
+
+    class MoveOrdering {
+    public:
+        static void orderMoves(const game::Board& board, std::vector<game::Move>& moves);
+    };
+
 }
