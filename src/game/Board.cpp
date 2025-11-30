@@ -48,4 +48,11 @@ namespace game {
         return oss.str();
     }
 
+    Board Board::place(int r, int c, char symbol) const {
+        Board copy = *this;
+        copy.set(r, c, symbol);   // or whatever setter you have
+        return copy;
+    }
+
+
 } // namespace game

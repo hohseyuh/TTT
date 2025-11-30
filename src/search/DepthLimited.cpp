@@ -7,7 +7,7 @@ namespace search {
 static int depthSearch(const Board& board, int depth, int alpha, int beta, bool maximizing) {
 
     if (depth == 0) {
-        return Heuristics::evaluate(board);
+        return search::evaluate(board);
     }
 
     auto util = Rules::utility(board);

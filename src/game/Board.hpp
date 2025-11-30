@@ -43,5 +43,9 @@ namespace game {
         bool isEmpty(int r, int c) const noexcept;
         int countEmpty() const noexcept;
         string toString() const;
+
+        // For test
+        Board place(int r, int c, char symbol) const;
+
     };
 }
