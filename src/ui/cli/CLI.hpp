@@ -1,26 +1,55 @@
 #pragma once
-#include "../../agents/agent.hpp"
 #include <memory>
+#include <string>
+#include <iostream>
+#include <chrono>
+
+#include "game/Board.hpp"
+#include "game/Rules.hpp"
+
+#include "agents/Agent.hpp"
+#include "agents/RandomAgent.hpp"
+#include "agents/MinimaxAgent.hpp"
+#include "agents/AlphaBetaAgent.hpp"
+#include "agents/DepthAgent.hpp"
+
+using namespace std;
 
 namespace ui {
+
     class CLI {
+        Board board;
+
+        unique_ptr<Agent> playerX;
+        unique_ptr<Agent> playerO;
+
+        bool showStats;
+
     public:
         CLI();
-
-        // Run the interactive loop
         void run();
 
     private:
-        void printBoard(const Board& board) const;
-        Move readHumanMove(const Board& board) const;
+        // Menus
+        int showMainMenu();
+        void configure();
+        void playGame();
+        void benchmark();
+        void help();
 
-        void playHumanVsAI();
-        void playAIVsHuman();
-        void playAIVsAI();
+        // Agent selection
+        unique_ptr<Agent> chooseAgent();
+        void warnIfSlow(const string& name);
 
-        // Helper: choose an agent type for AI
-        unique_ptr<agents::Agent> selectAgent(int m) const;
+        // Board and move handling
+        void printBoard() const;
+        game::Move readHumanMove();
 
-        void waitForEnter() const;
+        // Statistics
+        void printStats(const Agent* agent) const;
+
+        // Input utility
+        int readInt(int min, int max);
     };
+
 }

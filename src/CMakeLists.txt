@@ -1,82 +1,71 @@
-cmake_minimum_required(VERSION 3.16)
-project(GeneralizedTicTacToe LANGUAGES CXX)
+# src/CMakeLists.txt
 
-# ============================================
-# Global Compiler Settings
-# ============================================
-set(CMAKE_CXX_STANDARD 17)
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
-
-# Output directories
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
-set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
-set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
-
-# Top-level include folder
-include_directories(.)
-
-
-# ============================================
+# -----------------------------
 # Game Library
-# ============================================
+# -----------------------------
 add_library(game
-        game/Board.cpp
-        game/KDetector.cpp
-        game/Rules.cpp
+    game/Board.cpp
+    game/KDetector.cpp
+    game/Rules.cpp
 )
 
-target_include_directories(game PUBLIC .)
+target_include_directories(game PUBLIC
+    ${CMAKE_CURRENT_SOURCE_DIR}
+)
 
-
-# ============================================
+# -----------------------------
 # Search Library
-# ============================================
+# -----------------------------
 add_library(search
-        search/Minimax.cpp
-        search/AlphaBeta.cpp
-        search/DepthLimited.cpp
-        search/Heuristics.cpp
-        search/MoveOrdering.cpp
+    search/Minimax.cpp
+    search/AlphaBeta.cpp
+    search/DepthLimited.cpp
+    search/Heuristics.cpp
+    search/MoveOrdering.cpp
 )
 
-target_include_directories(search PUBLIC .)
+target_include_directories(search PUBLIC
+    ${CMAKE_CURRENT_SOURCE_DIR}
+)
+
 target_link_libraries(search PUBLIC game)
 
-
-# ============================================
+# -----------------------------
 # Agents Library
-# ============================================
+# -----------------------------
 add_library(agents
-        agents/MinimaxAgent.cpp
-        agents/AlphaBetaAgent.cpp
-        agents/DepthAgent.cpp
+    agents/RandomAgent.cpp
+    agents/MinimaxAgent.cpp
+    agents/AlphaBetaAgent.cpp
+    agents/DepthAgent.cpp
 )
 
-target_include_directories(agents PUBLIC .)
+target_include_directories(agents PUBLIC
+    ${CMAKE_CURRENT_SOURCE_DIR}
+)
+
 target_link_libraries(agents PUBLIC game search)
 
-
-# ============================================
-# CLI UI Library
-# ============================================
+# -----------------------------
+# CLI Library
+# -----------------------------
 add_library(ui_cli
-        ui/cli/CLI.cpp
+    ui/cli/CLI.cpp
 )
 
-target_include_directories(ui_cli PUBLIC .)
+target_include_directories(ui_cli PUBLIC
+    ${CMAKE_CURRENT_SOURCE_DIR}
+)
+
 target_link_libraries(ui_cli PUBLIC game search agents)
 
-
-# ============================================
+# -----------------------------
 # Main Executable
-# ============================================
+# -----------------------------
 add_executable(gt_main
-        main.cpp
+    main.cpp
 )
 
 target_link_libraries(gt_main PRIVATE
-        game
-        search
-        agents
-        ui_cli
+    game search agents ui_cli
 )

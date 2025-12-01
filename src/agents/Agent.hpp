@@ -1,14 +1,14 @@
 #pragma once
+#include <string>
 #include "../game/Board.hpp"
+#include "SearchStats.hpp"
 
-using namespace game;
+class Agent {
+public:
+    virtual ~Agent() = default;
 
-namespace agents {
-    class Agent {
-    public:
-        virtual ~Agent() = default;
+    virtual game::Move chooseMove(const game::Board& board) = 0;
+    virtual std::string name() const = 0;
 
-        // Returns the chosen move for the current state.
-        virtual Move chooseMove(const Board& board) = 0;
-    };
-}
+    virtual const SearchStats* stats() const { return nullptr; }
+};

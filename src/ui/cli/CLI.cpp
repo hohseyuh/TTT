@@ -1,224 +1,264 @@
 #include "CLI.hpp"
 
-#include "../../game/Rules.hpp"
-#include "../../agents/minimaxAgent.hpp"
-#include "../../agents/alphaBetaAgent.hpp"
-#include "../../agents/depthAgent.hpp"
+#include <limits>
 
-#include <iostream>
 using namespace std;
 using namespace game;
-using namespace agents;
 
 namespace ui {
 
-CLI::CLI() {}
-
-void CLI::printBoard(const Board& board) const {
-    cout << "\nCurrent board:\n";
-    cout << board.toString() << "\n\n";
+// Constructor
+CLI::CLI()
+    : board(Rules::initialState(3,3)),
+      showStats(true) {
 }
 
-game::Move CLI::readHumanMove(const Board& board) const {
+// Entry point
+void CLI::run() {
+    cout << "\nTIC TAC TOE AI ENGINE\n";
+
     while (true) {
-        cout << "Enter your move (row col): ";
+        int choice = showMainMenu();
+        switch (choice) {
+            case 1: playGame(); break;
+            case 2: configure(); break;
+            case 3: benchmark(); break;
+            case 4: help(); break;
+            case 5:
+                cout << "Exiting.\n";
+                return;
+            default:
+                cout << "Invalid choice. Try again.\n";
+        }
+    }
+}
+
+// Main menu
+int CLI::showMainMenu() {
+    cout << "\n1. Play Game\n";
+    cout << "2. Configure Game\n";
+    cout << "3. Benchmark AI\n";
+    cout << "4. Help\n";
+    cout << "5. Exit\n";
+    cout << "Choice: ";
+    return readInt(1,5);
+}
+
+// Configuration
+void CLI::configure() {
+    cout << "\nCONFIGURATION\n";
+
+    cout << "Board size m: ";
+    int m = readInt(2, 1000);
+
+    cout << "Win condition k: ";
+    int k = readInt(2, m);
+
+    board = Rules::initialState(m,k);
+
+    cout << "\nChoose Player X:\n";
+    playerX = chooseAgent();
+
+    cout << "\nChoose Player O:\n";
+    playerO = chooseAgent();
+
+    cout << "Show AI statistics? (1 yes, 0 no): ";
+    showStats = (readInt(0,1) == 1);
+
+    cout << "Configuration saved.\n";
+}
+
+// Agent selection
+unique_ptr<Agent> CLI::chooseAgent() {
+    cout << "1. Human\n";
+    cout << "2. Minimax\n";
+    cout << "3. Alpha Beta\n";
+    cout << "4. Depth Limited\n";
+    cout << "5. Random\n";
+    cout << "Choice: ";
+
+    while (true) {
+        int c = readInt(1,5);
+        switch (c) {
+            case 1: return nullptr;
+
+            case 2:
+                warnIfSlow("Minimax");
+                return make_unique<MinimaxAgent>();
+
+            case 3:
+                warnIfSlow("Alpha Beta");
+                return make_unique<AlphaBetaAgent>();
+
+            case 4: {
+                cout << "Depth (1 to 20): ";
+                int d = readInt(1,20);
+                return make_unique<DepthAgent>(d);
+            }
+
+            case 5:
+                return make_unique<RandomAgent>();
+        }
+    }
+}
+
+// Warn user about expensive algorithms on m>3
+void CLI::warnIfSlow(const string& name) {
+    if (board.m > 3) {
+        cout << "Warning: " << name
+             << " may be very slow on boards larger than 3.\n";
+    }
+}
+
+// Game loop
+void CLI::playGame() {
+    board = Rules::initialState(board.m, board.k);
+
+    cout << "\nGAME START\n";
+
+    while (!Rules::terminal(board)) {
+        printBoard();
+
+        char p = Rules::player(board);
+        Agent* agent = (p == 'X') ? playerX.get() : playerO.get();
+
+        cout << "\nPlayer " << p << " turn.\n";
+
+        Move move;
+
+        if (!agent) {
+            move = readHumanMove();
+        } else {
+            cout << agent->name() << " is thinking...\n";
+
+            move = agent->chooseMove(board);
+
+            if (showStats) {
+                printStats(agent);
+            }
+        }
+
+        board = Rules::result(board, move);
+    }
+
+    printBoard();
+
+    if (auto w = Rules::winner(board); w.has_value()) {
+        cout << "Winner: " << *w << "\n";
+    } else {
+        cout << "Draw.\n";
+    }
+}
+
+// Board printing
+void CLI::printBoard() const {
+    int m = board.m;
+
+    cout << "\n   ";
+    for (int c = 0; c < m; c++) cout << c << " ";
+    cout << "\n";
+
+    for (int r = 0; r < m; r++) {
+        cout << r << "  ";
+        for (int c = 0; c < m; c++) {
+            char ch = board.at(r,c);
+            if (ch == ' ') ch = '.';
+            cout << ch << " ";
+        }
+        cout << "\n";
+    }
+}
+
+// Human input
+Move CLI::readHumanMove() {
+    while (true) {
+        cout << "Enter row and column: ";
         int r, c;
         cin >> r >> c;
 
         if (!cin) {
             cin.clear();
-            cin.ignore(10000, '\n');
-            cout << "Invalid input. Try again.\n";
+            cin.ignore(numeric_limits<streamsize>::max(), '\n');
+            cout << "Invalid input.\n";
             continue;
         }
 
-        if (!board.inBounds(r, c)) {
-            cout << "Out of bounds. Try again.\n";
+        if (!board.inBounds(r,c)) {
+            cout << "Out of bounds.\n";
             continue;
         }
 
-        if (!board.isEmpty(r, c)) {
-            cout << "Cell not empty. Try again.\n";
+        if (!board.isEmpty(r,c)) {
+            cout << "Cell is not empty.\n";
             continue;
         }
 
-        return {r, c};
+        return Move{r,c};
     }
 }
 
-    std::unique_ptr<Agent> CLI::selectAgent(int m) const {
-    cout << "Choose AI agent:\n";
-    cout << "  1. Minimax (optimal 3x3)\n";
-    cout << "  2. AlphaBeta (optimal 3x3)\n";
-    cout << "  3. DepthLimited (recommended for m > 3)\n";
-
-    while (true) {
-        cout << "Selection (1/2/3): ";
-        int ch;
-        cin >> ch;
-
-        if (ch == 1) {
-            if (m > 3) {
-                cout << "\nWARNING: Minimax is computationally infeasible for m > 3.\n"
-                     << "The AI may freeze, take extremely long, or fail to respond.\n\n";
-            }
-            return make_unique<MinimaxAgent>();
-        }
-
-        if (ch == 2) {
-            if (m > 3) {
-                cout << "\nWARNING: Alpha–Beta pruning is still infeasible for m > 3.\n"
-                     << "Search tree size becomes astronomical. Use DepthLimited instead.\n\n";
-            }
-            return make_unique<AlphaBetaAgent>();
-        }
-
-        if (ch == 3) {
-            cout << "Enter depth limit (>=1): ";
-            int d;
-            cin >> d;
-            return make_unique<DepthAgent>(d);
-        }
-
-        cout << "Invalid selection. Try again.\n";
+// Statistics
+void CLI::printStats(const Agent* agent) const {
+    if (!agent) return;
+    if (auto* s = agent->stats()) {
+        cout << "Nodes: " << s->nodesExplored << "\n";
+        if (s->pruned >= 0) cout << "Pruned: " << s->pruned << "\n";
+        cout << "Evaluation: " << s->value << "\n";
     }
 }
 
+// Benchmark
+void CLI::benchmark() {
+    cout << "\nBenchmarking on 3x3...\n";
 
-void CLI::playHumanVsAI() {
-    int m, k;
-    cout << "Board size m: ";
-    cin >> m;
-    cout << "Win length k: ";
-    cin >> k;
+    Board b = Rules::initialState(3,3);
 
-    Board board = Rules::initialState(m, k);
+    auto runTest = [&](const string& name, Agent& agent) {
+        auto t0 = chrono::steady_clock::now();
+        agent.chooseMove(b);
+        auto t1 = chrono::steady_clock::now();
 
-    cout << "\nYour mark is X by default (you move first).\n";
+        long long ms = chrono::duration_cast<chrono::milliseconds>(t1 - t0).count();
+        cout << name << ": " << ms << " ms\n";
+    };
 
-    auto ai = selectAgent(m);
+    MinimaxAgent mm;
+    AlphaBetaAgent ab;
+    DepthAgent dl(6);
 
-    while (true) {
-        printBoard(board);
-
-        if (Rules::terminal(board)) break;
-
-        // Human turn
-        if (Rules::player(board) == 'X') {
-            Move mv = readHumanMove(board);
-            board = Rules::result(board, mv);
-        }
-        else {
-            // AI turn
-            cout << "AI thinking...\n";
-            Move mv = ai->chooseMove(board);
-            cout << "AI plays: " << mv.r << " " << mv.c << "\n";
-            board = Rules::result(board, mv);
-        }
-    }
-
-    printBoard(board);
-
-    auto w = Rules::winner(board);
-    if (w.has_value()) cout << "Winner: " << w.value() << "\n";
-    else cout << "Result: Draw\n";
+    runTest("Minimax", mm);
+    runTest("Alpha Beta", ab);
+    runTest("Depth Limited 6", dl);
 }
 
-void CLI::playAIVsHuman() {
-    int m, k;
-    cout << "Board size m: ";
-    cin >> m;
-    cout << "Win length k: ";
-    cin >> k;
+// Help
+void CLI::help() {
+    cout << "\nHELP\n";
+    cout << "This is a generalised m k game.\n";
+    cout << "Minimax is optimal but extremely slow for large boards.\n";
+    cout << "Alpha Beta is more efficient but still expensive.\n";
+    cout << "Depth Limited uses heuristics and scales well.\n";
+    cout << "Random Agent is for testing.\n";
+}
 
-    Board board = Rules::initialState(m, k);
-
-    cout << "\nYour mark is O. AI (X) moves first.\n";
-
-    auto ai = selectAgent(m);
-
+// Integer reader
+int CLI::readInt(int min, int max) {
     while (true) {
-        printBoard(board);
+        int v;
+        cin >> v;
 
-        if (Rules::terminal(board)) break;
-
-        if (Rules::player(board) == 'X') {
-            cout << "AI thinking...\n";
-            Move mv = ai->chooseMove(board);
-            cout << "AI plays: " << mv.r << " " << mv.c << "\n";
-            board = Rules::result(board, mv);
+        if (!cin) {
+            cin.clear();
+            cin.ignore(numeric_limits<streamsize>::max(), '\n');
+            cout << "Invalid input. Try again: ";
+            continue;
         }
-        else {
-            Move mv = readHumanMove(board);
-            board = Rules::result(board, mv);
+
+        if (v >= min && v <= max) {
+            return v;
         }
-    }
 
-    printBoard(board);
-
-    auto w = Rules::winner(board);
-    if (w.has_value()) cout << "Winner: " << w.value() << "\n";
-    else cout << "Result: Draw\n";
-}
-
-void CLI::playAIVsAI() {
-    int m, k;
-    cout << "Board size m: ";
-    cin >> m;
-    cout << "Win length k: ";
-    cin >> k;
-
-    Board board = Rules::initialState(m, k);
-
-    cout << "\nSelect AI for X:\n";
-    auto ax = selectAgent(m);
-
-    cout << "\nSelect AI for O:\n";
-    auto ao = selectAgent(m);
-
-    while (true) {
-        printBoard(board);
-        if (Rules::terminal(board)) break;
-
-        Agent* current = (Rules::player(board) == 'X') ? ax.get() : ao.get();
-
-        cout << "AI (" << Rules::player(board) << ") thinking...\n";
-        Move mv = current->chooseMove(board);
-
-        cout << "AI plays: " << mv.r << " " << mv.c << "\n";
-        board = Rules::result(board, mv);
-    }
-
-    printBoard(board);
-
-    auto w = Rules::winner(board);
-    if (w.has_value()) cout << "Winner: " << w.value() << "\n";
-    else cout << "Result: Draw\n";
-}
-
-void CLI::waitForEnter() const {
-    cout << "\nPress ENTER to continue...";
-    cin.ignore();
-    cin.get();
-}
-
-void CLI::run() {
-    while (true) {
-        cout << "\n=== Tic Tac Toe (Generalised) ===\n";
-        cout << "  1. Human vs AI\n";
-        cout << "  2. AI vs Human\n";
-        cout << "  3. AI vs AI\n";
-        cout << "  4. Quit\n";
-
-        cout << "Selection: ";
-        int ch;
-        cin >> ch;
-
-        if (ch == 1) playHumanVsAI();
-        else if (ch == 2) playAIVsHuman();
-        else if (ch == 3) playAIVsAI();
-        else if (ch == 4) break;
-        else cout << "Invalid selection.\n";
+        cout << "Enter a number in range " << min << " to " << max << ": ";
     }
 }
 
