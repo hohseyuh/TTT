@@ -1,9 +1,6 @@
 #pragma once
 
-#include <vector>
-#include <string>
-#include <optional>
-#include <cstddef>
+#include <bits/stdc++.h>
 
 using namespace std;
 

@@ -41,7 +41,7 @@ AlphaBetaResult run(const Board& board) {
     Move bestMove;
 
     for (const Move& mv : moves) {
-        Board child = Rules::result(board, mv);
+        Board child = result(board, mv);
         int value = alphaBetaValue(child, alpha, beta, !maximizing);
 
         if (maximizing) {
