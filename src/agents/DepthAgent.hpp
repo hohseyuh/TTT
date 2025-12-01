@@ -1,20 +1,24 @@
 #pragma once
-#include "Agent.hpp"
 
-using namespace game;
+#include "Agent.hpp"
+#include "../search/DepthLimitedResult.hpp"
+#include <memory>
 
 class DepthAgent : public Agent {
 public:
-    explicit DepthAgent(int depth) : depthLimit(depth) {}
+    DepthAgent(int maxDepth);
+    DepthAgent(int maxDepth, long long timeLimitMs, bool useIterativeDeepening);
 
-    Move chooseMove(const Board& board) override;
-    std::string name() const override { return "DepthLimited"; }
-    const SearchStats* stats() const override { return &last; }
+    game::Move chooseMove(const game::Board& board) override;
+    const SearchStats* stats() const override;
+    std::string name() const override;
 
 private:
-    int eval(const Board& b, int depth, bool maximizing);
-    int heuristic(const Board&);
+    int maxDepth;
+    long long timeLimitMs;
+    bool useID;
 
-    int depthLimit;
-    SearchStats last;
+    search::DepthLimitedResult last;
+
+    mutable SearchStats statsCache;
 };

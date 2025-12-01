@@ -1,56 +1,109 @@
-#include "depthLimited.hpp"
+#include "DepthLimited.hpp"
+#include "moveOrdering.hpp"
+#include "Heuristics.hpp"
+#include <chrono>
+#include <algorithm>
+
 using namespace std;
 using namespace game;
 
 namespace search {
 
-static int depthSearch(const Board& board, int depth, int alpha, int beta, bool maximizing) {
+int DepthLimited::nodesExplored = 0;
+int DepthLimited::maxDepthReached = 0;
+bool DepthLimited::foundExactValue = false;
 
-    if (depth == 0) {
-        return search::evaluate(board);
+static inline long long nowMs() {
+    return chrono::duration_cast<chrono::milliseconds>(
+        chrono::steady_clock::now().time_since_epoch()
+    ).count();
+}
+
+int DepthLimited::depthLimitedValue(const Board& board,
+                                    int depth,
+                                    int alpha,
+                                    int beta,
+                                    bool maximizing,
+                                    int currentDepth)
+{
+    nodesExplored++;
+    maxDepthReached = max(maxDepthReached, currentDepth);
+
+    // Terminal state
+    if (auto util = Rules::utility(board)) {
+        foundExactValue = true;
+        int v = *util;
+
+        // Same scaling logic as Java
+        if (v > 0) return v * 1000 + depth;
+        if (v < 0) return v * 1000 - depth;
+        return 0;
     }
 
-    auto util = Rules::utility(board);
-    if (util.has_value()) return util.value();
+    // Depth limit
+    if (depth <= 0) {
+        return evaluate(board);
+    }
 
-    vector<Move> moves = Rules::actions(board);
+    // Generate & order moves
+    auto moves = Rules::actions(board);
     MoveOrdering::orderMoves(board, moves);
 
     if (maximizing) {
-        int best = -1000000;
-        for (const Move& mv : moves) {
+        int value = INT_MIN + 1000;
+
+        for (auto mv : moves) {
             Board child = Rules::result(board, mv);
-            best = max(best, depthSearch(child, depth - 1, alpha, beta, false));
-            alpha = max(alpha, best);
+            value = max(value, depthLimitedValue(child, depth - 1,
+                                                 alpha, beta, false,
+                                                 currentDepth + 1));
+            alpha = max(alpha, value);
             if (alpha >= beta) break;
         }
-        return best;
+
+        return value;
+    } else {
+        int value = INT_MAX - 1000;
+
+        for (auto mv : moves) {
+            Board child = Rules::result(board, mv);
+            value = min(value, depthLimitedValue(child, depth - 1,
+                                                 alpha, beta, true,
+                                                 currentDepth + 1));
+            beta = min(beta, value);
+            if (beta <= alpha) break;
+        }
+
+        return value;
     }
-    int best = +1000000;
-    for (const Move& mv : moves) {
-        Board child = Rules::result(board, mv);
-        best = min(best, depthSearch(child, depth - 1, alpha, beta, true));
-        beta = min(beta, best);
-        if (beta <= alpha) break;
-    }
-    return best;
 }
 
-DepthSearchResult DepthLimited::run(const Board& board, int depth) {
-    vector<Move> moves = Rules::actions(board);
-    bool maximizing = (Rules::player(board) == 'X');
+DepthLimitedResult DepthLimited::run(const Board& board, int maxDepth)
+{
+    nodesExplored = 0;
+    maxDepthReached = 0;
+    foundExactValue = false;
+
+    auto moves = Rules::actions(board);
+    if (moves.empty()) {
+        return DepthLimitedResult(0, {0,0}, 0, 0, true);
+    }
 
     MoveOrdering::orderMoves(board, moves);
 
-    int alpha = -1000000;
-    int beta  = +1000000;
+    bool maximizing = (Rules::player(board) == 'X');
+    int alpha = INT_MIN + 1000;
+    int beta = INT_MAX - 1000;
 
-    int bestValue = maximizing ? -1000000 : +1000000;
-    Move bestMove;
+    int bestValue = maximizing ? INT_MIN + 1000 : INT_MAX - 1000;
+    game::Move bestMove = moves[0];
 
-    for (const Move& mv : moves) {
+    for (auto mv : moves) {
         Board child = Rules::result(board, mv);
-        int value = depthSearch(child, depth - 1, alpha, beta, !maximizing);
+
+        int value = depthLimitedValue(child, maxDepth - 1,
+                                      alpha, beta, !maximizing,
+                                      1);
 
         if (maximizing) {
             if (value > bestValue) {
@@ -67,7 +120,30 @@ DepthSearchResult DepthLimited::run(const Board& board, int depth) {
         }
     }
 
-    return { bestValue, bestMove };
+    return DepthLimitedResult(bestValue, bestMove,
+                              nodesExplored, maxDepthReached,
+                              foundExactValue);
+}
+
+DepthLimitedResult DepthLimited::iterativeDeepening(const Board& board,
+                                                    int maxDepth,
+                                                    long long timeLimitMs)
+{
+    long long start = nowMs();
+    DepthLimitedResult best = DepthLimitedResult();
+
+    for (int depth = 1; depth <= maxDepth; depth++) {
+        if (timeLimitMs > 0 && nowMs() - start >= timeLimitMs)
+            break;
+
+        DepthLimitedResult r = run(board, depth);
+        best = r;
+
+        if (r.isExact && abs(r.value) > 900)
+            break;
+    }
+
+    return best.value != 0 ? best : run(board, 1);
 }
 
 }

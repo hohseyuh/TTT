@@ -1,58 +1,34 @@
 #include "DepthAgent.hpp"
-#include "../game/Rules.hpp"
-#include <algorithm>
+#include "../search/DepthLimited.hpp"
+#include <sstream>
 
-using namespace std;
+DepthAgent::DepthAgent(int maxDepth)
+    : maxDepth(maxDepth), timeLimitMs(0), useID(false) {}
 
-int DepthAgent::heuristic(const Board& b) {
-    if (auto u = Rules::utility(b)) return *u * 1000;
-    return 0;
+DepthAgent::DepthAgent(int maxDepth, long long timeLimitMs, bool useIterativeDeepening)
+    : maxDepth(maxDepth), timeLimitMs(timeLimitMs), useID(useIterativeDeepening) {}
+
+game::Move DepthAgent::chooseMove(const game::Board& board) {
+    if (useID)
+        last = search::DepthLimited::iterativeDeepening(board, maxDepth, timeLimitMs);
+    else
+        last = search::DepthLimited::run(board, maxDepth);
+
+    statsCache.nodesExplored = last.nodesExplored;
+    statsCache.value = last.value;
+    statsCache.maxDepthReached = last.maxDepthReached;
+    statsCache.isExact = last.isExact;
+    statsCache.pruned = -1;
+
+    return last.move;
 }
 
-int DepthAgent::eval(const Board& b, int depth, bool maximizing) {
-    last.nodesExplored++;
-    last.maxDepthReached = max(last.maxDepthReached, depthLimit - depth);
-
-    if (auto u = Rules::utility(b)) {
-        last.isExact = true;
-        return *u * 1000;
-    }
-    if (depth == 0) {
-        last.isExact = false;
-        return heuristic(b);
-    }
-
-    auto moves = Rules::actions(b);
-    int best = maximizing ? -999999 : 999999;
-
-    for (auto mv : moves) {
-        Board nb = Rules::result(b, mv);
-        int v = eval(nb, depth - 1, !maximizing);
-
-        if (maximizing) best = max(best, v);
-        else            best = min(best, v);
-    }
-
-    return best;
+const SearchStats* DepthAgent::stats() const {
+    return &statsCache;
 }
 
-Move DepthAgent::chooseMove(const Board& board) {
-    last = {};
-
-    bool maximizing = (Rules::player(board) == 'X');
-    auto moves = Rules::actions(board);
-
-    Move bestMove = moves[0];
-    int bestVal = maximizing ? -999999 : 999999;
-
-    for (auto mv : moves) {
-        Board nb = Rules::result(board, mv);
-        int val = eval(nb, depthLimit, !maximizing);
-
-        if (maximizing && val > bestVal) { bestVal = val; bestMove = mv; }
-        if (!maximizing && val < bestVal) { bestVal = val; bestMove = mv; }
-    }
-
-    last.value = bestVal;
-    return bestMove;
+std::string DepthAgent::name() const {
+    std::ostringstream os;
+    os << "Depth-Limited Agent (depth=" << maxDepth << ")";
+    return os.str();
 }

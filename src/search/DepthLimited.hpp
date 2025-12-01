@@ -1,18 +1,30 @@
 #pragma once
-#include "heuristics.hpp"
-#include "moveOrdering.hpp"
+
+#include "../game/Board.hpp"
 #include "../game/Rules.hpp"
+#include "DepthLimitedResult.hpp"
 
 namespace search {
 
-    struct DepthSearchResult {
-        int value;
-        game::Move move;
-    };
-
     class DepthLimited {
     public:
-        static DepthSearchResult run(const game::Board& board, int depth);
+        static DepthLimitedResult run(const game::Board& board, int maxDepth);
+        static DepthLimitedResult iterativeDeepening(const game::Board& board,
+                                                     int maxDepth,
+                                                     long long timeLimitMs);
+
+    private:
+        static int depthLimitedValue(const game::Board& board,
+                                     int depth,
+                                     int alpha,
+                                     int beta,
+                                     bool maximizing,
+                                     int currentDepth);
+
+    private:
+        static int nodesExplored;
+        static int maxDepthReached;
+        static bool foundExactValue;
     };
 
 }
